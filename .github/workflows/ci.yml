@@ -1,0 +1,42 @@
+name: CI - Run demos
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-demos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Prefer binary wheels to avoid build issues
+          pip install --no-cache-dir --only-binary :all: -r requirements.txt || pip install -r requirements.txt
+
+      - name: List repo files
+        run: ls -la
+
+      - name: Run ETL demo
+        run: |
+          python demo_etl.py
+
+      - name: Run Database demo (SQLite)
+        run: |
+          python demo_database.py
+
+      - name: Verify ETL output
+        run: |
+          if [ -f data/transformed_data.csv ]; then echo "Transformed CSV exists"; else echo "Missing transformed CSV"; exit 1; fi
+          python -c "import pandas as pd; print('Rows,Cols:', pd.read_csv('data/transformed_data.csv').shape)"
